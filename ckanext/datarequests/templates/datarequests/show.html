@@ -65,4 +65,8 @@
     {% snippet "datarequests/snippets/additional_info.html", datarequest=c.datarequest %}
   {% endblock %}
 
+  {% block disqus_comments %}
+    {{ h.disqus_comments() }}
+  {% endblock %}
+
 {% endblock %}
