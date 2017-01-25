@@ -44,12 +44,6 @@ class DataRequestsPlugin(p.SingletonPlugin):
     p.implements(p.IRoutes, inherit=True)
     p.implements(p.ITemplateHelpers)
 
-    # ITranslation only available in 2.5+
-    try:
-        p.implements(p.ITranslation)
-    except AttributeError:
-        pass
-
     def __init__(self, name=None):
         self.comments_enabled = get_config_bool_value('ckan.datarequests.comments', True)
         self._show_datarequests_badge = get_config_bool_value('ckan.datarequests.show_datarequests_badge')
