@@ -73,7 +73,7 @@ class DBTest(unittest.TestCase):
         model.Session.query = MagicMock(return_value=query)
 
         # Init the database
-        db.init_db(model)
+        db.init_db()
 
         # Call the method
         params = {
@@ -108,7 +108,7 @@ class DBTest(unittest.TestCase):
         model.Session.query = MagicMock(return_value=query)
 
         # Init the database
-        db.init_db(model)
+        db.init_db()
         # Mapping
         table = getattr(db, table)
         time_column_value = MagicMock()
@@ -158,7 +158,7 @@ class DBTest(unittest.TestCase):
 
         # Call the function
         model = MagicMock()
-        db.init_db(model)
+        db.init_db()
 
         # Assert that table method has been called
         self.assertEquals(3, db.sa.Table.call_count)
@@ -173,7 +173,7 @@ class DBTest(unittest.TestCase):
 
         # Call the function
         model = MagicMock()
-        db.init_db(model)
+        db.init_db()
 
         # Assert that table method has been called
         self.assertEquals(0, db.sa.Table.call_count)
@@ -216,7 +216,7 @@ class DBTest(unittest.TestCase):
         model.Session.query = MagicMock(return_value=query)
 
         # Init the database
-        db.init_db(model)
+        db.init_db()
 
         # Call the method
         db.DataRequest.title = 'TITLE'
@@ -262,7 +262,7 @@ class DBTest(unittest.TestCase):
         model.Session.query = MagicMock(return_value=query)
 
         # Init the database
-        db.init_db(model)
+        db.init_db()
 
         # Call the method
         db.DataRequest.id = 'id'
@@ -304,7 +304,7 @@ class DBTest(unittest.TestCase):
         model.Session.query = MagicMock(return_value=query)
 
         # Init the database
-        db.init_db(model)
+        db.init_db()
 
         # Call the method
         params = {
@@ -341,7 +341,7 @@ class DBTest(unittest.TestCase):
         model.Session.query = MagicMock(return_value=query)
 
         # Init the database
-        db.init_db(model)
+        db.init_db()
 
         # Call the method
         params = {

@@ -17,14 +17,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with CKAN Data Requests Extension. If not, see <http://www.gnu.org/licenses/>.
 
-import sqlalchemy as sa
 import uuid
 import logging
-import ckan.plugins.toolkit as tk
-from ckanext.datarequests import constants
 
+import ckan.plugins.toolkit as tk
+from ckan import model
+
+import sqlalchemy as sa
 from sqlalchemy import func, MetaData, DDL
 from sqlalchemy.sql.expression import or_
+
+from ckanext.datarequests import constants
+
 
 log = logging.getLogger(__name__)
 DataRequest = None
@@ -36,7 +40,7 @@ def uuid4():
     return str(uuid.uuid4())
 
 
-def init_db(model):
+def init_db():
 
     global DataRequest
     global Comment
