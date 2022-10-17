@@ -30,8 +30,8 @@ from ckan.lib import mailer
 from ckan.plugins import toolkit as tk
 from ckan.plugins.toolkit import h, config
 
-from . import constants, db, validator
-
+from ckanext.datarequests import constants, validator
+from ckanext.datarequests.model import Comment, DataRequest, DataRequestFollower
 
 log = logging.getLogger(__name__)
 
@@ -98,7 +98,7 @@ def _dictize_datarequest(datarequest):
     if datarequest.accepted_dataset_id:
         data_dict['accepted_dataset'] = _get_package(datarequest.accepted_dataset_id)
 
-    data_dict['followers'] = db.DataRequestFollower.get_datarequest_followers_number(
+    data_dict['followers'] = DataRequestFollower.get_datarequest_followers_number(
         datarequest_id=datarequest.id)
 
     if h.closing_circumstances_enabled:
@@ -147,7 +147,7 @@ def _get_datarequest_involved_users(context, datarequest_dict):
     # Creator + Followers + People who has commented + Organization Staff
     users = set()
     users.add(datarequest_dict['user_id'])
-    users.update([follower.user_id for follower in db.DataRequestFollower.get(datarequest_id=datarequest_id)])
+    users.update([follower.user_id for follower in DataRequestFollower.get(datarequest_id=datarequest_id)])
     users.update([comment['user_id'] for comment in list_datarequest_comments(new_context, {'datarequest_id': datarequest_id})])
 
     if datarequest_dict['organization']:
@@ -206,11 +206,7 @@ def create_datarequest(context, data_dict):
     :rtype: dict
     '''
 
-    model = context['model']
     session = context['session']
-
-    # Init the data base
-    db.init_db()
 
     # Check access
     tk.check_access(constants.CREATE_DATAREQUEST, context, data_dict)
@@ -219,7 +215,7 @@ def create_datarequest(context, data_dict):
     validator.validate_datarequest(context, data_dict)
 
     # Store the data
-    data_req = db.DataRequest()
+    data_req = DataRequest()
     _undictize_datarequest_basic(data_req, data_dict)
     data_req.user_id = context['auth_user_obj'].id
     data_req.open_time = datetime.datetime.utcnow()
@@ -255,20 +251,16 @@ def show_datarequest(context, data_dict):
     :rtype: dict
     '''
 
-    model = context['model']
     datarequest_id = data_dict.get('id', '')
 
     if not datarequest_id:
         raise tk.ValidationError(tk._('Data Request ID has not been included'))
 
-    # Init the data base
-    db.init_db()
-
     # Check access
     tk.check_access(constants.SHOW_DATAREQUEST, context, data_dict)
 
     # Get the data request
-    result = db.DataRequest.get(id=datarequest_id)
+    result = DataRequest.get(id=datarequest_id)
     if not result:
         raise tk.ObjectNotFound(tk._('Data Request %s not found in the data base') % datarequest_id)
 
@@ -307,21 +299,17 @@ def update_datarequest(context, data_dict):
     :rtype: dict
     '''
 
-    model = context['model']
     session = context['session']
     datarequest_id = data_dict.get('id', '')
 
     if not datarequest_id:
         raise tk.ValidationError(tk._('Data Request ID has not been included'))
 
-    # Init the data base
-    db.init_db()
-
     # Check access
     tk.check_access(constants.UPDATE_DATAREQUEST, context, data_dict)
 
     # Get the initial data
-    result = db.DataRequest.get(id=datarequest_id)
+    result = DataRequest.get(id=datarequest_id)
     if not result:
         raise tk.ObjectNotFound(tk._('Data Request %s not found in the data base') % datarequest_id)
 
@@ -384,12 +372,8 @@ def list_datarequests(context, data_dict):
     :rtype: dict
     '''
 
-    model = context['model']
     organization_show = tk.get_action('organization_show')
     user_show = tk.get_action('user_show')
-
-    # Init the data base
-    db.init_db()
 
     # Check access
     tk.check_access(constants.LIST_DATAREQUESTS, context, data_dict)
@@ -419,7 +403,7 @@ def list_datarequests(context, data_dict):
         desc = True
 
     # Call the function
-    db_datarequests = db.DataRequest.get_ordered_by_date(organization_id=organization_id,
+    db_datarequests = DataRequest.get_ordered_by_date(organization_id=organization_id,
                                                          user_id=user_id, closed=closed,
                                                          q=q, desc=desc)
 
@@ -498,7 +482,6 @@ def delete_datarequest(context, data_dict):
     :rtype: dict
     '''
 
-    model = context['model']
     session = context['session']
     datarequest_id = data_dict.get('id', '')
 
@@ -506,14 +489,11 @@ def delete_datarequest(context, data_dict):
     if not datarequest_id:
         raise tk.ValidationError(tk._('Data Request ID has not been included'))
 
-    # Init the data base
-    db.init_db()
-
     # Check access
     tk.check_access(constants.DELETE_DATAREQUEST, context, data_dict)
 
     # Get the data request
-    result = db.DataRequest.get(id=datarequest_id)
+    result = DataRequest.get(id=datarequest_id)
     if not result:
         raise tk.ObjectNotFound(tk._('Data Request %s not found in the data base') % datarequest_id)
 
@@ -544,7 +524,6 @@ def close_datarequest(context, data_dict):
 
     '''
 
-    model = context['model']
     session = context['session']
     datarequest_id = data_dict.get('id', '')
 
@@ -552,14 +531,11 @@ def close_datarequest(context, data_dict):
     if not datarequest_id:
         raise tk.ValidationError(tk._('Data Request ID has not been included'))
 
-    # Init the data base
-    db.init_db()
-
     # Check access
     tk.check_access(constants.CLOSE_DATAREQUEST, context, data_dict)
 
     # Get the data request
-    result = db.DataRequest.get(id=datarequest_id)
+    result = DataRequest.get(id=datarequest_id)
     if not result:
         raise tk.ObjectNotFound(tk._('Data Request %s not found in the data base') % datarequest_id)
 
@@ -607,16 +583,12 @@ def comment_datarequest(context, data_dict):
 
     '''
 
-    model = context['model']
     session = context['session']
     datarequest_id = data_dict.get('datarequest_id', '')
 
     # Check id
     if not datarequest_id:
         raise tk.ValidationError([tk._('Data Request ID has not been included')])
-
-    # Init the data base
-    db.init_db()
 
     # Check access
     tk.check_access(constants.COMMENT_DATAREQUEST, context, data_dict)
@@ -625,7 +597,7 @@ def comment_datarequest(context, data_dict):
     datarequest_dict = validator.validate_comment(context, data_dict)
 
     # Store the data
-    comment = db.Comment()
+    comment = Comment()
     _undictize_comment_basic(comment, data_dict)
     comment.user_id = context['auth_user_obj'].id
     comment.time = datetime.datetime.utcnow()
@@ -654,21 +626,17 @@ def show_datarequest_comment(context, data_dict):
     :rtype: dict
     '''
 
-    model = context['model']
     comment_id = data_dict.get('id', '')
 
     # Check id
     if not comment_id:
         raise tk.ValidationError([tk._('Comment ID has not been included')])
 
-    # Init the data base
-    db.init_db()
-
     # Check access
     tk.check_access(constants.SHOW_DATAREQUEST_COMMENT, context, data_dict)
 
     # Get comments
-    result = db.Comment.get(id=comment_id)
+    result = Comment.get(id=comment_id)
     if not result:
         raise tk.ObjectNotFound(tk._('Comment %s not found in the data base') % comment_id)
 
@@ -700,15 +668,11 @@ def list_datarequest_comments(context, data_dict):
     :rtype: list
     '''
 
-    model = context['model']
     datarequest_id = data_dict.get('datarequest_id', '')
 
     # Check id
     if not datarequest_id:
         raise tk.ValidationError(tk._('Data Request ID has not been included'))
-
-    # Init the data base
-    db.init_db()
 
     # Sort. By default, comments are returned in the order they are created
     # This is something new in version 0.3.0. In previous versions, comments
@@ -721,7 +685,7 @@ def list_datarequest_comments(context, data_dict):
     tk.check_access(constants.LIST_DATAREQUEST_COMMENTS, context, data_dict)
 
     # Get comments
-    comments_db = db.Comment.get_ordered_by_date(datarequest_id=datarequest_id, desc=desc)
+    comments_db = Comment.get_ordered_by_date(datarequest_id=datarequest_id, desc=desc)
 
     comments_list = []
     for comment in comments_db:
@@ -747,21 +711,17 @@ def update_datarequest_comment(context, data_dict):
     :rtype: dict
     '''
 
-    model = context['model']
     session = context['session']
     comment_id = data_dict.get('id', '')
 
     if not comment_id:
         raise tk.ValidationError([tk._('Comment ID has not been included')])
 
-    # Init the data base
-    db.init_db()
-
     # Check access
     tk.check_access(constants.UPDATE_DATAREQUEST_COMMENT, context, data_dict)
 
     # Get the data request
-    result = db.Comment.get(id=comment_id)
+    result = Comment.get(id=comment_id)
     if not result:
         raise tk.ObjectNotFound(tk._('Comment %s not found in the data base') % comment_id)
 
@@ -793,21 +753,17 @@ def delete_datarequest_comment(context, data_dict):
     :rtype: dict
     '''
 
-    model = context['model']
     session = context['session']
     comment_id = data_dict.get('id', '')
 
     if not comment_id:
         raise tk.ValidationError([tk._('Comment ID has not been included')])
 
-    # Init the data base
-    db.init_db()
-
     # Check access
     tk.check_access(constants.DELETE_DATAREQUEST_COMMENT, context, data_dict)
 
     # Get the comment
-    result = db.Comment.get(id=comment_id)
+    result = Comment.get(id=comment_id)
     if not result:
         raise tk.ObjectNotFound(tk._('Comment %s not found in the data base') % comment_id)
 
@@ -835,32 +791,28 @@ def follow_datarequest(context, data_dict):
     :rtype: bool
     '''
 
-    model = context['model']
     session = context['session']
     datarequest_id = data_dict.get('id', '')
 
     if not datarequest_id:
         raise tk.ValidationError([tk._('Data Request ID has not been included')])
 
-    # Init the data base
-    db.init_db()
-
     # Check access
     tk.check_access(constants.FOLLOW_DATAREQUEST, context, data_dict)
 
     # Get the data request
-    result = db.DataRequest.get(id=datarequest_id)
+    result = DataRequest.get(id=datarequest_id)
     if not result:
         raise tk.ObjectNotFound(tk._('Data Request %s not found in the data base') % datarequest_id)
 
     # Is already following?
     user_id = context['auth_user_obj'].id
-    result = db.DataRequestFollower.get(datarequest_id=datarequest_id, user_id=user_id)
+    result = DataRequestFollower.get(datarequest_id=datarequest_id, user_id=user_id)
     if result:
         raise tk.ValidationError([tk._('The user is already following the given Data Request')])
 
     # Store the data
-    follower = db.DataRequestFollower()
+    follower = DataRequestFollower()
     follower.datarequest_id = datarequest_id
     follower.user_id = user_id
     follower.time = datetime.datetime.now()
@@ -887,22 +839,18 @@ def unfollow_datarequest(context, data_dict):
     :rtype: bool
     '''
 
-    model = context['model']
     session = context['session']
     datarequest_id = data_dict.get('id', '')
 
     if not datarequest_id:
         raise tk.ValidationError([tk._('Data Request ID has not been included')])
 
-    # Init the data base
-    db.init_db()
-
     # Check access
     tk.check_access(constants.UNFOLLOW_DATAREQUEST, context, data_dict)
 
     # Is already following?
     user_id = context['auth_user_obj'].id
-    result = db.DataRequestFollower.get(datarequest_id=datarequest_id, user_id=user_id)
+    result = DataRequestFollower.get(datarequest_id=datarequest_id, user_id=user_id)
     if not result:
         raise tk.ObjectNotFound([tk._('The user is not following the given Data Request')])
 
